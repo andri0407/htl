@@ -1,8 +1,10 @@
 <?php
 class Test extends CI_Controller{
 
-    public class testing(){
-    	echo "tes";
+    public function __construct(){
+        parent::__construct();
     }
+
+
 
 }
