@@ -18,20 +18,7 @@ class Dashboard extends CI_Controller {
       $data['info']='';
       $data['breadcrumb']='Dashboard';
 
-      /*
-        format data untuk tulis kartu    = tipeIntruksi/noKamar/date_in/time_in/date_out/time_out/idTamu/namaTamu/0
-        ex : tulisKartu#31/19-02-25/17:00:00/19-02-26/13:00:00/1002/guest/0
-      */
-      $command = "tulisKartu#00000000000#31/19-02-25/17:00:00/19-03-26/13:00:00/1002/guest/0/14/1";
-        //$output="tes";
-      // $command = "bacaKartu#0#0";
-        //exec('HotelManagementSystem.exe -data '.$command,$output,$return);
-        //exec('D:\DATA\PROJECT\HOTEL\HMS\HotelManagementSystem\HotelManagementSystem\bin\x86\Release\HotelManagementSystem.exe -data '.$command,$output,$return);
-      if($output[0]=='Error'){
-         echo "Maaf, Terjadi kesalahan hubungi Administrator";
-      }else{
-         //dump($output);
-      }
+      
       $data['content']  = $this->showList();
       $this->load->view('dashboard_vw',$data);
   }
@@ -62,15 +49,14 @@ class Dashboard extends CI_Controller {
      return $this->load->view("dashboard_search_vw",$data);
   }
 
-  public function showForm($type){
-    $data['dataKamar']          = $this->getKamarReady();
-
-
+  public function showForm($type){    
     #if new
     if($type=="new"){
         $id_kamar                   = $this->input->post("id_kamar");
+        $data['dataKamar']          = $this->getKamarReady();
 
         $data['transaksi']          = array(0=>array("id_kamar"=>$id_kamar,
+                                                     "kendaraan"=>1,
                                                     "check_in"=>date("Y-m-d H:i:s"),
                                                     "jlh_org"=>1,
                                                     "jlh_hari"=>1,
@@ -85,35 +71,30 @@ class Dashboard extends CI_Controller {
     else if($type=="edit"){
         $notransaksi                = $this->input->post("notransaksi");
         $data['transaksi']          = $this->getTransaksi($notransaksi);
+
+        $id_kamar                   = $data['transaksi'][0]["id_kamar"];
+        $data['dataKamar']          = $this->getKamarReady($id_kamar);
+
+        $data['tamu']               = $data['transaksi'][0];
         $data['action']             = 'edit';
     }
 
-    $id_tamu                        = $this->input->post("id_tamu");
-
-    if($id_tamu !=""){
-       $data['tamu']                = $this->getTamu($id_tamu);
-    }
-    
-    /*
-*/
+    $data['formProfil']             = $this->load->view('dashboard_formProfil_vw',$data,true);
     return $this->load->view('dashboard_form_vw',$data,$this->template);
   }
 
- /* public function showFormEdit_all(){
-     $data['dataKamar']          = $this->getKamarEdit();
-     $id                         = $this->input->post("id");
-     $data['transaksi']          = $this->getTransaksi_all($id);
-     $data['action']             = 'edit';
-     return $this->load->view('dashboard_form_vw',$data,$this->template);
+
+  public function showFormProfile(){
+      $id_tamu                        = $this->input->post("id_tamu");
+
+      if($id_tamu !=""){
+         $data['tamu']                = $this->getTamu($id_tamu)[0];
+         return $this->load->view('dashboard_formProfil_vw',$data);
+      }
   }
 
 
-   public function showFormEdit(){
-     $data['dataKamar']          = $this->getKamarEdit();
-     $notransaksi                = $this->input->post("notransaksi");
-     $data['action']             = 'edit';
-     return $this->load->view('dashboard_form_vw',$data,$this->template);
-  }*/
+
 
   public function checkIn(){
         $data['profile']=array(
@@ -127,13 +108,30 @@ class Dashboard extends CI_Controller {
                           "keterangan"  => $this->input->post("keterangan"),
                         );
 
-        $this->db->insert('tamu',$data['profile']);
-        $id_tamu = $this->db->insert_id();
+        $id_tamu        = $this->input->post("id_tamu");
+        if($id_tamu==""){
+            $this->db->insert('tamu',$data['profile']);
+            $id_tamu    = $this->db->insert_id();
+        }
+        
 
        if($id_tamu>0){
             foreach($this->input->post("id_kamar") as $i=>$k){
                  $bts_check_out    = $this->convertDateTime($this->input->post("bts_check_out")[$i]);
                  $notransaksi      = $this->generateNotransaksi(substr($this->input->post("check_in"),0,10));
+
+                 $card ['id_kamar']         = $this->input->post("id_kamar");
+                 $card ['id_tamu']          = $id_tamu;
+                 $card ['nama_tamu']        = $this->input->post("nama");
+
+                 $check_in                  = explode(" ",$this->input->post("check_in"));
+                 $card ['date_in']          = $check_in[0];
+                 $card ['time_in']          = $check_in[1];
+
+                 $check_out                 = explode(" ",$bts_check_out);   
+                 $card ['date_out']         = $check_out[0];
+                 $card ['time_out']         = $check_out[1];   
+
 
                  $data['transaksi']= array(
                           "notransaksi"  => $notransaksi,
@@ -156,7 +154,11 @@ class Dashboard extends CI_Controller {
                  $this->db->where("id_kamar",$this->input->post("id_kamar")[$i]);
                  $this->db->update("kamar",array("status_kamar"=>1));
             }
+
+            $this->createCard($card);
        }
+
+
 
   }
 
@@ -176,8 +178,15 @@ class Dashboard extends CI_Controller {
                           "keterangan"  => $this->input->post("keterangan"),
                         );
 
-        $this->db->where('id_tamu',$id_tamu);
-        $this->db->update('tamu',$data['profile']);
+        if($id_tamu==""){
+            $this->db->insert('tamu',$data['profile']);
+            $id_tamu    = $this->db->insert_id();
+        }else{
+            $this->db->where('id_tamu',$id_tamu);
+            $this->db->update('tamu',$data['profile']);
+        }
+
+        
 
        if($id_tamu>0){
             foreach($this->input->post("id_kamar") as $i=>$k){
@@ -220,7 +229,7 @@ class Dashboard extends CI_Controller {
   }
 
 
-  public function checkOut_all(){
+  /*public function checkOut_all(){
       $id = explode("/",$this->input->post("id"));
       $id_tamu  = $id[0];
       $check_in = $id[1];
@@ -240,7 +249,7 @@ class Dashboard extends CI_Controller {
          $this->db->where("id_kamar",$trx['id_kamar']);
          $this->db->update("kamar",$dKamar);
       }
-  }
+  }*/
 
    public function checkOut(){
       $notransaksi = $this->input->post("notransaksi");
@@ -256,6 +265,19 @@ class Dashboard extends CI_Controller {
       $dKamar['status_kamar'] = 2;
       $this->db->where("id_kamar",$transaksi[0]['id_kamar']);
       $this->db->update("kamar",$dKamar);
+
+
+       $card ['id_kamar']         = 0;
+       $card ['id_tamu']          = 0;
+       $card ['nama_tamu']        = "";
+
+       $card ['date_in']          = "00-00-0000";
+       $card ['time_in']          = "00:00:00";
+
+       $card ['date_out']         = "00-00-0000";
+       $card ['time_out']         = "00:00:00";
+
+      $this->createCard($card);
   }
 
   public function getTgl(){
@@ -268,6 +290,46 @@ class Dashboard extends CI_Controller {
 
     echo $bts_check_out;
   }
+
+
+  public function createCard($dataCard){
+  //($id_kamar,$date_in,$time_in,$date_out,$time_out,$id_tamu,$nama_tamu){
+      /*
+        format data untuk tulis kartu    = tipeIntruksi/id_kamar/date_in/time_in/date_out/time_out/idTamu/namaTamu/0
+        ex : tulisKartu#31/19-02-25/17:00:00/19-02-26/13:00:00/1002/guest/0
+      */
+      // $command = "tulisKartu#00000000000#31/19-02-25/17:00:00/19-03-26/13:00:00/1002/guest/0/14/1";
+      // $command = "bacaKartu#0#0";
+      //exec('HotelManagementSystem.exe -data '.$command,$output,$return);
+      $id_kamar = $dataCard['id_kamar'][0];
+      $address = $this->getAddressRoom($id_kamar);
+      $command = "tulisKartu#".$address."#".$id_kamar."/".$dataCard['date_in']."/".$dataCard['time_in']."/".$dataCard['date_out']."/".$dataCard['time_out']."/".$dataCard['id_tamu']."/".$dataCard['nama_tamu']."/0/14/1";
+      $this->runCard($command);
+      
+  }
+
+
+
+  private function runCard($command){
+    exec('HotelManagementSystem.exe -data '.$command,$output,$return);
+     
+    if($output[0]=='Error'){
+      echo "Maaf, Terjadi kesalahan hubungi Administrator";
+      dump($output);
+    }else{
+      //dump($output);
+    }
+  }
+
+
+  private function getAddressRoom($id_kamar){
+     $sql = " select roomAddr from kamar where id_kamar='".$id_kamar."'";
+     $q = $this->db->query($sql);
+     $r = $q->row_array();
+     return $r['roomAddr'];
+  }
+
+
 
   private function generateNotransaksi($tgl){
       $sql = "SELECT MAX(CAST(SUBSTRING(notransaksi, 12, length(notransaksi)-3) AS UNSIGNED)) as maxNo FROM transaksi where check_in like '%".$tgl."%' ";
@@ -299,22 +361,14 @@ class Dashboard extends CI_Controller {
 
   private function getTamu($keyword){
     if($keyword!=""){
-       $sql ="select * from tamu where nama like '%".$keyword."%'";
+       $sql ="select * from tamu where nama like '%".$keyword."%' or id_tamu='".$keyword."'";
        return $this->fetchSql($sql);
     }
   }
 
-  private function getKamarReady(){
+  private function getKamarReady($id_kamar=""){
       #get kamar
-      $sql                = "select * from kamar where status_kamar=0 or status_kamar>4 order by id_kamar asc";
-      $data['kamar']      = $this->fetchSql($sql);
-
-      return $data['kamar'];
-  }
-
-  private function getKamarEdit(){
-      #get kamar
-      $sql                = "select * from kamar where status_kamar=0 or status_kamar=1 order by id_kamar asc";
+      $sql                = "select * from kamar where status_kamar=0 or status_kamar>4 or id_kamar='".$id_kamar."' order by id_kamar asc";
       $data['kamar']      = $this->fetchSql($sql);
 
       return $data['kamar'];

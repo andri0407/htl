@@ -8,6 +8,16 @@ function showForm(that){
 	})
 }
 
+function showFormEdit(that){
+	var url="dashboard/showForm/edit";
+	var data={};
+	data['notransaksi']	= $(that).attr("value");
+	var title			= data['id_kamar'];
+	general_sendPostDataNoLoading(url,data, function(f){
+		general_showModal(f,title)
+	})
+}
+
 function showList(){
 	var url="dashboard/showList";
 	var data={};
@@ -27,11 +37,11 @@ function showFormSearch(){
 }
 
 function loadDataToForm(id_tamu){
-	var url="dashboard/showForm/new";
+	var url="dashboard/showFormProfile";
 	var data={};
 	data['id_tamu']=id_tamu;
-	general_sendPostDataNoLoading(url,data, function(f){
-		showForm();
+	general_sendPostDataNoLoading(url,data, function(resp){
+		$("#profileDiv").html(resp)
 		general_closeDialog();
 	})
 }
@@ -70,20 +80,12 @@ function checkOut(that){
 
 
 
-function showFormEdit(that){
-	var url="dashboard/showForm/edit";
-	var data={};
-	data['notransaksi']=$(that).attr("value");
-	var title=$(that).find(".kamar").html();
-	general_sendPostDataNoLoading(url,data, function(f){
-		general_showModal(f,title)
-	})
-}
+
 
 function edit(that){
-	var url="dashboard/edit";
+	var url="dashboard";
 	var controller='dashboard';
-	var method    ='checkIn';
+	var method    ='edit';
 	var formId	  ='formGuest';
 	
 	general_sendFormData(controller,method,formId,function(resp){

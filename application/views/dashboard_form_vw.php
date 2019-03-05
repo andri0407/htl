@@ -22,7 +22,6 @@
             <div class="panel panel-default panel-accent-gold">
                 <div class="panel-body">
                         <form role="form" style="font-weight: bold;" id='formGuest'>
-                          <input type='hidden' value="<?php echo $transaksi[0]['id_tamu']?>" id="id_tamu">
                           <input type='hidden' value="<?php echo $transaksi[0]['notransaksi']?>" id="notransaksi">
                           <div class="box-body">
 
@@ -33,8 +32,9 @@
                                 <?php echo date("d M Y H:i:s",strtotime($transaksi[0]['check_in']));?>
                               </div>
                             </div>
-
-                             <?php echo $form_profil?>
+                            <span id="profileDiv">
+                             <?php echo $formProfil?>
+                            </span>
 
 			                <div class="form-group row">
 			                  <label  class="col-sm-4 control-label">Kendaraan</label>
@@ -47,7 +47,7 @@
 				                  	foreach($kendaraan as $i=>$kdr){
 				                  		$checked="";
 				                  		if($i == trim($transaksi[0]['kendaraan'])){$checked="checked";}
-	                               		echo '<input type="radio" name="kendaraan" '.$checked.'  value="1" class="col-sm-1"><i class="fa '.$i_kendaraan[$i].' col-sm-3"></i>';
+	                               		echo '<input type="radio" name="kendaraan" '.$checked.'  value="'.$i.'" class="col-sm-1"><i class="fa '.$i_kendaraan[$i].' col-sm-3"></i>';
 				                  	}
 				                  	?>
 	                                 <input type="radio" name="kendaraan" value="3" class="col-sm-1"><span class="col-sm-3">Lainnya</span>
